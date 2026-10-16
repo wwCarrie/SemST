@@ -10,6 +10,16 @@ import scanpy as sc
 import scipy.sparse as sp
 from config import Config
 
+"""人类乳腺癌
+    1. 10x Visium数据
+    2. 标签列叫 ground_truth
+    3. 做了一层二分类标签 annot_type
+       多分类标签粗化为 肿瘤 vs 正常：
+       - D/I/T归为1(肿瘤相关)
+       - H归为0(正常)
+    4. 空间图用graph, 自适应
+"""
+
 
 def normalize(adata, highly_genes=3000):
     print("start select HVGs")

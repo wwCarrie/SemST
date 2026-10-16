@@ -6,6 +6,13 @@ import torch
 from tqdm import tqdm
 from transformers import AutoTokenizer, AutoModel
 
+"""把每个细胞的“高表达基因列表”转换成一个向量
+    1.从数据里挑出表达量最高的10个基因
+    2.10个基因名字拼成一句话
+    3.喂给大语言模型
+    4.让模型读这句话，输出一个代表该细胞“生物学状态”的向量
+    5.所有细胞的向量存成.npy文件，方便训练使用
+"""
 
 def generate_llm_emb(llm_model_name, all_gene_texts, batch_size, device_for_precomputation,
                      prompt_system, prompt_user, max_length=256, npy_path=None):
@@ -21,7 +28,7 @@ def generate_llm_emb(llm_model_name, all_gene_texts, batch_size, device_for_prec
             param.requires_grad = False
         llm_base.eval().to(device_for_precomputation)
 
-        llm_hidden_dim = llm_base.config.hidden_size
+        llm_hidden_dim = llm_base.config.hidden_size # 输出向量的长度
         all_base_embs_list = []
 
         for i in tqdm(range(0, len(all_gene_texts), batch_size), desc="Precomputing LLM base embeddings"):
@@ -29,13 +36,14 @@ def generate_llm_emb(llm_model_name, all_gene_texts, batch_size, device_for_prec
             prompts = [
                 f"<|im_start|>system\n{prompt_system}<|im_end|>\n<|im_start|>user\n{prompt_user}{text}<|im_end|>\n<|im_start|>assistant\n"
                 for text in batch_texts
-            ]
+            ] # {text}里是基因列表
             inputs = tokenizer(prompts, return_tensors="pt", padding=True, truncation=True, max_length=max_length).to(
                 device_for_precomputation)
 
             with torch.no_grad():
                 outputs = llm_base(**inputs, output_hidden_states=False)
 
+            # 取平均得到句向量，代表整句话(细胞)的embedding
             last_hidden_states = outputs.last_hidden_state
             attention_mask = inputs['attention_mask'].unsqueeze(-1).expand(last_hidden_states.size())
             masked_hidden_states = last_hidden_states * attention_mask
@@ -63,7 +71,7 @@ def generate_llm_emb(llm_model_name, all_gene_texts, batch_size, device_for_prec
 if __name__ == '__main__':
 
     DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    N_TOP_GENES_LLM = 10
+    N_TOP_GENES_LLM = 10 # 取前10个基因
     LLM_MAX_LENGTH = 2560
     LLM_PRECOMPUTATION_BATCH_SIZE = 8
 
@@ -85,10 +93,11 @@ if __name__ == '__main__':
         adata = sc.read_h5ad(path)
 
         gene_expression_raw = adata.X.toarray() if isinstance(adata.X, np.ndarray) is False else adata.X
-        top_n_gene_indices = np.argsort(gene_expression_raw, axis=1)[:, -N_TOP_GENES_LLM:]
+        top_n_gene_indices = np.argsort(gene_expression_raw, axis=1)[:, -N_TOP_GENES_LLM:] # 按表达量排序，取下标
         cell_gene_texts = []
         gene_names_array = adata.var_names.to_numpy()
         for i in range(adata.n_obs):
+            # 找出下标对应的基因名字
             top_genes_for_cell = gene_names_array[top_n_gene_indices[i]]
             cell_gene_texts.append(", ".join(reversed(top_genes_for_cell)))
 

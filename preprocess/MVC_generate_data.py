@@ -11,6 +11,11 @@ import scipy.sparse as sp
 from config import Config
 from construction import features_construct_graph, spatial_construct_graph2
 
+"""另一个h5ad数据集
+    1.标签列叫 cluster
+    2.其他与Embryo结构一样
+"""
+
 
 def normalize(adata, highly_genes=3000):
     print("start select HVGs")

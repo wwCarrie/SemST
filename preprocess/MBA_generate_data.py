@@ -10,6 +10,11 @@ import scanpy as sc
 import scipy.sparse as sp
 from config import Config
 
+"""小鼠脑前部
+    1. HBC几乎一样
+    2. 不生成二分类的标签
+"""
+
 
 def normalize(adata, highly_genes=3000):
     print("start select HVGs")

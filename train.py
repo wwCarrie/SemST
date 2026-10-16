@@ -12,7 +12,7 @@ from matplotlib import pyplot as plt
 from sklearn import metrics
 from sklearn.cluster import KMeans
 from tqdm import tqdm
-import scanpy as sc
+import scanpy as sc # 处理空间转录组的数据
 
 from models import SemST
 from preprocess.config import Config
@@ -20,6 +20,13 @@ from utils import *
 
 warnings.filterwarnings("ignore")
 
+"""
+    流程：
+    1. 读取数据
+    2. 初始化SemST模型
+    3. 训练模型
+    4. 聚类与评价
+"""
 
 def load_data(dataset, data_path_prefix="DLPFC/"): 
     print("load data:")
@@ -33,13 +40,16 @@ def load_data(dataset, data_path_prefix="DLPFC/"):
     adata = sc.read_h5ad(path)
     features = torch.FloatTensor(adata.X)
     labels = adata.obs['ground']
+    # 特征图
     fadj = adata.obsm['fadj']
+    # 空间图
     sadj = adata.obsm['sadj']
+    # 给图增加自连接，考虑自己的信息
     nfadj = normalize_sparse_matrix(fadj + sp.eye(fadj.shape[0]))
-    nfadj = sparse_mx_to_torch_sparse_tensor(nfadj)
+    nfadj = sparse_mx_to_torch_sparse_tensor(nfadj) # 图进行归一化
     nsadj = normalize_sparse_matrix(sadj + sp.eye(sadj.shape[0]))
     nsadj = sparse_mx_to_torch_sparse_tensor(nsadj)
-    graph_nei = torch.LongTensor(adata.obsm['graph_nei'])
+    graph_nei = torch.LongTensor(adata.obsm['graph_nei']) # 矩阵转化为tensor
     graph_neg = torch.LongTensor(adata.obsm['graph_neg'])
     print("done")
     return adata, features, labels, nfadj, nsadj, graph_nei, graph_neg
@@ -165,6 +175,7 @@ if __name__ == "__main__":
     best_mean_for_dataset = []
     best_emb_for_dataset = []
 
+    # 循环训练
     for epoch in tqdm(range(config.epochs)):
         emb, mean, zinb_loss, reg_loss, dcir_loss, total_loss = train(
             model_instance, features, sadj, fadj, precomputed_llm_base_embeddings,
@@ -176,6 +187,7 @@ if __name__ == "__main__":
         emb = pd.DataFrame(emb.cpu().detach().numpy()).fillna(0).values
         mean = pd.DataFrame(mean.cpu().detach().numpy()).fillna(0).values
 
+        # 聚类与评价
         kmeans = KMeans(n_clusters=config.class_num, n_init='auto', random_state=config.seed).fit(emb)
         idx = kmeans.labels_
 
@@ -203,6 +215,7 @@ if __name__ == "__main__":
 
     print(f"Best ARI for {dataset_id}: {current_dataset_best_ari}")
 
+    # 画图
     title_str = (f'SemST: ARI={current_dataset_best_ari:.2f}\n'
                  f'NMI={current_dataset_best_nmi:.2f}, ACC={current_dataset_best_acc:.2f}\n'
                  f'F1_m={current_dataset_best_f1_m:.2f}, F1_w={current_dataset_best_f1_w:.2f}')

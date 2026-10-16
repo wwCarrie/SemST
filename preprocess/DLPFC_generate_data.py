@@ -11,18 +11,46 @@ import scanpy as sc
 from config import Config
 from construction import features_construct_graph, spatial_construct_graph1
 
+"""
+    以该为例子，其他相同。
+    把不同来源、不同类型的数据，处理成统一的格式，保存为h5ad文件
+    包含：基因表达、空间坐标、细胞类型标签、图结构
+"""
+
+"""人脑背外侧前额叶皮层
+    1. 10x Visium
+    2. sc.read_visium读取, metadata.tsv存标签
+    3. 标签列叫 layer_guess_reordered(人工标注的大脑皮层层次)
+    4. 特殊点处理
+        1. 删除没标签的spot(标签+坐标)
+        2. Visium的元数据保留
+    5. 空间图用graph1
+"""
+
 
 def normalize(adata, highly_genes=3000):
     print("start select HVGs")
+    # 过滤掉在太少细胞里出现的基因（min_cells=100）
     sc.pp.filter_genes(adata, min_cells=100)
+    # 用 Seurat 方法挑出高变基因 HVGs（默认 3000 个）
     sc.pp.highly_variable_genes(adata, flavor="seurat_v3", n_top_genes=highly_genes)
+    # 归一化到每个细胞总表达量为 10000（CPM 归一化）
     adata = adata[:, adata.var['highly_variable']].copy()
     adata.X = adata.X / np.sum(adata.X, axis=1).reshape(-1, 1) * 10000
+    # scale 缩放，把过大的值压到 10 以内
     sc.pp.scale(adata, zero_center=False, max_value=10)
     return adata
 
 
 def load_ST_file(path, highly_genes, k, radius):
+    """
+        1. 读数据
+        2. 取标签
+        3. 归一化
+        4. 建基因相似图 fadj
+        5. 建空间图 sadj
+        6. 返回
+    """
     labels_path = os.path.join(path, "metadata.tsv")
 
     labels = pd.read_table(labels_path, sep='\t')
@@ -68,6 +96,13 @@ def load_ST_file(path, highly_genes, k, radius):
 
 
 if __name__ == "__main__":
+    """
+        - 设GPU
+        - 循环数据集
+        - 读配置文件
+        - 调用load_ST_file
+        - 结果写入data.h5ad
+    """
     parse = argparse.ArgumentParser()
     os.environ["CUDA_VISIBLE_DEVICES"] = "0"
     # datasets = ['151507', '151508', '151509', '151510', '151669', '151670',

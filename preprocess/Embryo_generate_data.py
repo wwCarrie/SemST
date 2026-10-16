@@ -1,3 +1,4 @@
+
 from __future__ import division
 from __future__ import print_function
 
@@ -11,12 +12,20 @@ import scipy.sparse as sp
 from config import Config
 from construction import features_construct_graph, spatial_construct_graph2
 
+"""小鼠胚胎(以及处理好的h5ad, MOSTA空间转录组)
+    1. sc.read_h5ad
+    2. 标签列叫 annotation(细胞/组织类型注释)
+    3. 空间图用graph2
+    4. 归一化分母加了1e-15, 防止某个细胞总表达量为 0 时除以 0 报错
+"""
+
 
 def normalize(adata, highly_genes=3000):
     print("start select HVGs")
     sc.pp.filter_genes(adata, min_cells=100)
     sc.pp.highly_variable_genes(adata, flavor="seurat_v3", n_top_genes=highly_genes)
     adata = adata[:, adata.var['highly_variable']].copy()
+    # 额外在分母加了 1e-15，防止除0
     adata.X = adata.X / (np.sum(adata.X, axis=1).reshape(-1, 1) * 10000 + 1e-15)
     sc.pp.scale(adata, zero_center=False, max_value=10)
 
