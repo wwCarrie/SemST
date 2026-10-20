@@ -17,6 +17,8 @@ from utils import *
     1.加载训练好的模型, 每个点映射为向量
     2.KMeans把向量分成若干类
     3.和真实标签对比打分
+
+    和train一致，但是去掉了train的過程，直接
 """
 
 def load_data(dataset, data_path_prefix="DLPFC/"):  
@@ -130,6 +132,7 @@ if __name__ == "__main__":
     if cuda_enabled:
         model_instance.cuda()
 
+    """不同于train的地方:直接加载已经保存的权重，没有进行模型训练"""
     model_instance.load_state_dict(
         torch.load(
             os.path.join(args.weights_dir, rf'model_{dataset_id}.pth'), # 加入加载训练好的权重

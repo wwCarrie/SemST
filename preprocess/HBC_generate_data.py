@@ -54,9 +54,11 @@ def load_ST_file(path, highly_genes, k, k1):
 
     adata.obs['ground_truth'] = labels.values
     adata.obs['ground'] = ground
+    # 二分类标签
     adata.obs['annot_type'] = cell_labels.values.astype(int)
     adata.var_names_make_unique()
 
+    # 先把表达矩阵转成 CSR 稀疏矩阵，再转为稠密矩阵，最后转换为 NumPy 数组
     adata.X = np.array(sp.csr_matrix(adata.X, dtype=np.float32).todense())
     print(adata)
     adata = normalize(adata, highly_genes=highly_genes)

@@ -33,12 +33,12 @@ def normalize(adata, highly_genes=3000):
 
 
 def load_ST_file(path, highly_genes, k, k1):
-    adata = sc.read_h5ad(path)
+    adata = sc.read_h5ad(path) # 读取现成的AnnData
     adata.var_names_make_unique()
     labels = adata.obs['annotation'].copy()
 
     ground = labels
-    _, ground = np.unique(ground, return_inverse=True)
+    _, ground = np.unique(ground, return_inverse=True) # 类别转换为整数
     adata.obs['ground_truth'] = labels.values
     adata.obs['ground'] = ground
 

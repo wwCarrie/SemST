@@ -1,0 +1,36 @@
+dataset        = Mouse_Brain_Anterior
+config         = Mouse_Brain_Anterior
+spots          = 2695
+classes        = 52
+fdim / llm_dim = 3000 / 2560
+
+ARI = 53.92
+NMI = 70.12
+AMI = 66.03
+ACC = 51.09
+F1_weighted = 50.60
+F1_macro    = 38.11
+
+== 误差归因 ==
+类别规模-准确率 相关系数 : 0.398
+大类别(>=50 spot)平均准确率 : 49.6%
+小类别(<50 spot) 平均准确率 : 35.1%
+
+误差中, 预测类别是其空间邻居类别 的占比 : 40.8% (538/1318)
+
+== 0% 准确率的类被误分到哪 ==
+  MOB::MI (n=14) -> AOB::Gr(11), MOB::Opl(2), MOB::Gr(1)
+  ORB::L5 (n=40) -> MO::L5(28), SS::L5(12)
+  AOB::Ml (n=5) -> AOB::Gr(5)
+  Not_annotated (n=2) -> TH::RT(1), AOE(1)
+  Py (n=8) -> SLu(8)
+  ORB::L6 (n=28) -> MO::L6(17), MO::L5(11)
+  FRP::L2/3 (n=22) -> SS::L5(10), SS::L2/3(5), ORB::L2/3(5)
+
+== 准确率最高的 5 个类 ==
+  SLu (n=10) -> 100.0%
+  MOB::Gr (n=116) -> 94.8%
+  CPu (n=323) -> 91.6%
+  LV (n=18) -> 88.9%
+  AON::L2 (n=28) -> 85.7%
+

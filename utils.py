@@ -1,8 +1,8 @@
 import numpy as np
 import scipy.sparse as sp
 import torch
-import torch.nn.functional as F
-from scipy.optimize import linear_sum_assignment
+import torch.nn.functional as F # 主要用于向量归一化
+from scipy.optimize import linear_sum_assignment # 匈牙利算法
 from sklearn.decomposition import PCA
 
 """
@@ -35,11 +35,12 @@ def regularization_loss(emb, graph_nei, graph_neg):
 
     # graph_neg = torch.ones(graph_nei.shape) - graph_nei
 
+    # 计算正邻居损失和负邻居损失
     # 对于空间邻居，希望相似度趋于1, 对于负邻居，希望相似度趋于0
     neigh_loss = torch.mul(graph_nei, torch.log(mat)).mean()
     neg_loss = torch.mul(graph_neg, torch.log(1 - mat)).mean()
 
-    # 得到空间约束 loss，是邻居但损失大 -> 被惩罚
+    # 得到空间约束 loss，要求越小，是邻居但损失大 -> 被惩罚
     pair_loss = -(neigh_loss + neg_loss) / 2
     return pair_loss
 
@@ -53,10 +54,13 @@ def cosine_similarity(emb):
         - 余弦相似度矩阵
     """
     mat = torch.matmul(emb, emb.T) # 计算点积
+    # torch.norm(..., p=2)：计算 L2 范数，也就是向量长度
     norm = torch.norm(emb, p=2, dim=1).reshape((emb.shape[0], 1)) # 长度
     mat = torch.div(mat, torch.matmul(norm, norm.T)) # 归一化，得到余弦相似度
     if torch.any(torch.isnan(mat)):
         mat = _nan2zero(mat)
+    # torch.diag(mat)：提取矩阵对角线
+    # torch.diag_embed(...)：把这些值重新放到对角矩阵中
     mat = mat - torch.diag_embed(torch.diag(mat)) # 对角线，自己与自己相似度1，去除掉
     return mat
 
@@ -85,9 +89,14 @@ def cross_correlation(Z_v1, Z_v2):
         Z_v2: the second view embedding
     Returns: S
     S[i][j]: "视图1的第 i 维"和"视图2的第 j 维"之间的相关性
-    """
-    return torch.mm(F.normalize(Z_v1, dim=1), F.normalize(Z_v2, dim=1).t())
 
+    注意：
+    1.N*N:样本行的相似度
+    2.若是二者转置:特征维度之间的相似度
+    """
+    # F.normalize:每一行进行 L2 归一化，使每个非零行向量的长度为 1
+    # torch.mm:矩阵乘法
+    return torch.mm(F.normalize(Z_v1, dim=1), F.normalize(Z_v2, dim=1).t())
 
 def correlation_reduction_loss(S):
     """
@@ -97,6 +106,10 @@ def correlation_reduction_loss(S):
         S: the cross-view correlation matrix S
     Returns: L
     """
+    # 第一部分：损失希望对应维度之间的相关性接近1
+    # 第二部分：希望不同维度之间的相关性接近0
+    # diagonal：提取对角线
+    # -> 希望交叉相关矩阵接近单位矩阵
     return torch.diagonal(S).add(-1).pow(2).mean() + off_diagonal(S).pow(2).mean()
 
 
@@ -130,12 +143,16 @@ def dicr_loss(com1, com2):
 
 
 def dopca(data, dim=50):
-    """PCA 降维, 减少计算量"""
+    """PCA 降维, 减少计算量
+    PCA(n_components=dim)：创建 PCA 模型，保留指定数量的主成分
+    .fit_transform(data)：先学习主成分，再将数据投影到这些主成分上
+    """
     return PCA(n_components=dim).fit_transform(data)
 
 
 def _nan2zero(x):
     # _nan2zero：NaN → 0，用在相似度计算里（零向量相除会产生 nan，就当成"没相似度"）
+    # torch.where(c,A,B):c成立A，否则B
     return torch.where(torch.isnan(x), torch.zeros_like(x), x)
 
 
@@ -150,9 +167,11 @@ def sparse_mx_to_torch_sparse_tensor(sparse_mx):
     # COO格式：记录非零元素的行索引、列索引和对应的值
     # 将 COO 格式的稀疏矩阵转换为 PyTorch 的稀疏张量 (COO+shape)
     sparse_mx = sparse_mx.tocoo().astype(np.float32)
+    # np.vstack(...)：将两个索引数组纵向堆叠
     indices = torch.from_numpy(np.vstack((sparse_mx.row, sparse_mx.col)).astype(np.int64))
-    values = torch.from_numpy(sparse_mx.data)
+    values = torch.from_numpy(sparse_mx.data) # 张量
     shape = torch.Size(sparse_mx.shape)
+    # 利用索引、数值、形状构造PyTorch稀疏矩阵
     return torch.sparse.FloatTensor(indices, values, shape)
 
 
@@ -162,9 +181,14 @@ def normalize_sparse_matrix(mx):
     进行行归一化，使得每个节点的邻居特征对其影响一致，避免度数较高的节点对模型产生过大影响
     """
     rowsum = np.array(mx.sum(1))
-    r_inv = np.power(rowsum, -1).flatten()
+    # 对每一行的和取倒数
+    # .flatten() 将结果展平成一维数组
+    r_inv = np.power(rowsum, -1).flatten() 
+    # 当某一行和0，则r_inv变成无穷大，->0
     r_inv[np.isinf(r_inv)] = 0.
+    # sp.diags() 构造对角矩阵
     r_mat_inv = sp.diags(r_inv)
+    # 左乘对角矩阵，相当于将原矩阵的每一行除以该行的元素和 -> 归一化
     mx = r_mat_inv.dot(mx)
     return mx
 
@@ -177,12 +201,14 @@ class NB(object):
     def __init__(self, theta=None, scale_factor=1.0):
         super(NB, self).__init__()
         self.eps = 1e-10
-        self.scale_factor = scale_factor
-        self.theta = theta
+        self.scale_factor = scale_factor # 缩放系数
+        self.theta = theta # 离散度参数
 
     def loss(self, y_true, y_pred, mean=True):
         y_pred = y_pred * self.scale_factor
+        # 对theta进行大小限制10^6
         theta = torch.minimum(self.theta, torch.tensor(1e6))
+        # torch.lgamma(x) 计算 Gamma 函数的对数
         t1 = torch.lgamma(theta + self.eps) + torch.lgamma(y_true + 1.0) - torch.lgamma(y_true + theta + self.eps)
         t2 = (theta + y_true) * torch.log(1.0 + (y_pred / (theta + self.eps))) + (
                 y_true * (torch.log(theta + self.eps) - torch.log(y_pred + self.eps)))
@@ -200,7 +226,7 @@ class ZINB(NB):
     def __init__(self, pi, ridge_lambda=0.0, **kwargs):
         super().__init__(**kwargs)
         self.pi = pi # 概率
-        self.ridge_lambda = ridge_lambda
+        self.ridge_lambda = ridge_lambda # 控制额外正则化项的系数
 
     def loss(self, y_true, y_pred, mean=True):
         scale_factor = self.scale_factor
@@ -220,10 +246,10 @@ class ZINB(NB):
 
 
 def run_precomputation_llm_base(npy_path=None):
-    """加载预计算LLM嵌入向量"""
+    """加载预计算LLM嵌入向量.npy"""
     final_base_embeddings = np.load(npy_path)
     final_base_embeddings = torch.tensor(final_base_embeddings)
-    llm_hidden_dim = final_base_embeddings.shape[-1]
+    llm_hidden_dim = final_base_embeddings.shape[-1] # 最后一个维度，语义向量的维度
     return final_base_embeddings, llm_hidden_dim
 
 
@@ -232,17 +258,17 @@ def hungarian_match(y_true, y_pred):
     y_true = np.asarray(y_true)
     y_pred = np.asarray(y_pred)
 
-    D = max(y_pred.max(), y_true.max()) + 1
-    cost_matrix = np.zeros((D, D), dtype=np.int64)
+    D = max(y_pred.max(), y_true.max()) + 1 # 标签数量
+    cost_matrix = np.zeros((D, D), dtype=np.int64) # 计数矩阵
     for i in range(len(y_pred)):
         cost_matrix[y_pred[i], y_true[i]] += 1 
         # 预测pred[i]的标签和真实y_true[i]的标签对应的计数加1
 
     # linear_sum_assignment：求总代价最小的配对方案
-    # 我们前面得到的是总收益最大（数字最大），需进行翻转
+    # 我们前面得到的是总收益最大（数字最大），需进行翻转 max-
     # 每行选一个，每列选一个，要求最小
     row_ind, col_ind = linear_sum_assignment(cost_matrix.max() - cost_matrix)
     mapping = {r: c for r, c in zip(row_ind, col_ind)}
 
-    y_pred_aligned = np.array([mapping[y] for y in y_pred])
+    y_pred_aligned = np.array([mapping[y] for y in y_pred]) 
     return y_pred_aligned

@@ -3,11 +3,12 @@ import configparser
 class Config(object):
     """配置加载类，从.ini里面读取超参数"""
     def __init__(self, config_file):
-        conf = configparser.ConfigParser()
+        conf = configparser.ConfigParser(inline_comment_prefixes=('#', ';'))
         try:
-            conf.read(config_file)
-        except:
-            print("loading config: %s failed" % (config_file))
+            conf.read(config_file, encoding='utf-8')
+        except Exception as e:
+            print("loading config: %s failed: %s" % (config_file, e))
+            raise
 
         # Parameter
         self.fdim = conf.getint("Data_Setting", "fdim") # 特征维度

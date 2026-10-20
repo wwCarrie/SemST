@@ -44,7 +44,8 @@ def load_data(dataset, data_path_prefix="DLPFC/"):
     fadj = adata.obsm['fadj']
     # 空间图
     sadj = adata.obsm['sadj']
-    # 给图增加自连接，考虑自己的信息
+    # +单位矩阵：给图增加自连接，考虑自己的信息
+    # sp.eye(N)：创建 N*N 的单位矩阵
     nfadj = normalize_sparse_matrix(fadj + sp.eye(fadj.shape[0]))
     nfadj = sparse_mx_to_torch_sparse_tensor(nfadj) # 图进行归一化
     nsadj = normalize_sparse_matrix(sadj + sp.eye(sadj.shape[0]))
@@ -66,8 +67,8 @@ def train(model, features, sadj, fadj, precomputed_llm_base_embeddings, graph_ne
     dcir_loss = dicr_loss(emb1, emb2)
 
     total_loss = config.alpha * zinb_loss + config.gamma * reg_loss + config.beta * dcir_loss
-    total_loss.backward()
-    optimizer.step()
+    total_loss.backward() # 反向传播，计算各个可训练参数的梯度
+    optimizer.step() # 反向传播，计算梯度
 
     with torch.no_grad():
         model.eval()
@@ -136,6 +137,7 @@ if __name__ == "__main__":
     if cuda_enabled:
         torch.cuda.manual_seed(config.seed)
         torch.cuda.manual_seed_all(config.seed)
+        # 尽量使用确定性的 cuDNN 算法，并关闭自动寻找最快算法的机制
         torch.backends.cudnn.deterministic = True
         torch.backends.cudnn.benchmark = False
     os.environ['CUBLAS_WORKSPACE_CONFIG'] = ':4096:8'
@@ -196,10 +198,13 @@ if __name__ == "__main__":
         ami_res = metrics.adjusted_mutual_info_score(labels, idx) * 100
 
         if config_name == 'DLPFC':
+            # 重新编码为整数
             _, labels = np.unique(labels, return_inverse=True)
         idx_aligned = hungarian_match(labels, idx)
         acc_res = metrics.accuracy_score(labels, idx_aligned) * 100
+        # 计算加权 F1
         f1_res_w = metrics.f1_score(labels, idx_aligned, average='weighted') * 100
+        # 计算宏平均 F1
         f1_res_m = metrics.f1_score(labels, idx_aligned, average='macro') * 100
 
         if ari_res > current_dataset_best_ari:
@@ -225,13 +230,15 @@ if __name__ == "__main__":
     adata.obsm['mean'] = best_mean_for_dataset
 
     if config_name in ['DLPFC', 'Human_Breast_Cancer', 'Mouse_Brain_Anterior']:
+        # 绘制空间分布图
         sc.pl.spatial(adata,
-                      img_key='hires',
+                      img_key='hires', # 使用 adata.uns['spatial'] 中的高分辨率组织图像
                       color=['idx'],
                       title=title_str,
                       show=False
                       )
     else:
+        # 根据空间坐标绘制聚类结果
         sc.pl.embedding(adata,
                         basis="spatial",
                         color="idx",

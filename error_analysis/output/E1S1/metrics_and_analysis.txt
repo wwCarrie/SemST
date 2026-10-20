@@ -1,0 +1,30 @@
+dataset        = E1S1
+config         = Embryo
+spots          = 5913
+classes        = 12
+fdim / llm_dim = 3000 / 2560
+
+ARI = 50.50
+NMI = 60.06
+AMI = 59.87
+ACC = 60.93
+F1_weighted = 59.07
+F1_macro    = 55.68
+
+== 误差归因 ==
+类别规模-准确率 相关系数 : -0.132
+大类别(>=50 spot)平均准确率 : 64.1%
+小类别(<50 spot) 平均准确率 : N/A(无此类)
+
+误差中, 预测类别是其空间邻居类别 的占比 : 45.3% (1047/2310)
+
+== 0% 准确率的类被误分到哪 ==
+  Mesenchyme (n=337) -> Dermomyotome(189), Sclerotome(67), Connective tissue(52)
+
+== 准确率最高的 5 个类 ==
+  Dermomyotome (n=273) -> 94.9%
+  Sclerotome (n=244) -> 92.6%
+  Brain (n=1518) -> 87.2%
+  Notochord (n=236) -> 83.9%
+  Connective tissue (n=283) -> 82.7%
+

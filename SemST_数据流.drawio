@@ -1,0 +1,369 @@
+<mxfile host="Electron" agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) draw.io/28.2.8 Chrome/140.0.7339.240 Electron/38.4.0 Safari/537.36" compressed="false" version="28.2.8">
+  <diagram id="semst-dataflow" name="SemST数据流">
+    <mxGraphModel dx="5744" dy="1724" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="2400" pageHeight="2000" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="legend" value="&lt;b&gt;&lt;br&gt;默认数据集 Mouse_Brain_Anterior&lt;/b&gt;&lt;br&gt;N(spots)=2695&lt;br&gt;G_raw=32285, G_HVG=3000&lt;br&gt;K(聚类数)=52, nhid1=128, nhid2=64&lt;br&gt;llm_dim=2560" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#666666;fontSize=12;align=left;verticalAlign=middle;spacing=8;" parent="1" vertex="1">
+          <mxGeometry x="1580" y="20" width="520" height="120" as="geometry" />
+        </mxCell>
+        <mxCell id="raw_count" value="&lt;br&gt;&lt;b&gt;filtered_feature_bc_matrix.h5&lt;/b&gt;&lt;br&gt;Visium 原始 UMI 计数&lt;br&gt;&lt;br&gt;2695 spots × 32285 genes" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=12;align=left;verticalAlign=middle;spacing=8;" parent="1" vertex="1">
+          <mxGeometry x="60" y="20" width="330" height="90" as="geometry" />
+        </mxCell>
+        <mxCell id="raw_meta" value="&lt;br&gt;&lt;b&gt;metadata.tsv&lt;/b&gt;&lt;br&gt;ground_truth 空间域标签&lt;br&gt;&lt;br&gt;2695 行" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=12;align=left;verticalAlign=middle;spacing=8;" parent="1" vertex="1">
+          <mxGeometry x="450" y="20" width="300" height="90" as="geometry" />
+        </mxCell>
+        <mxCell id="raw_pos" value="&lt;br&gt;&lt;b&gt;tissue_positions_list.csv&lt;/b&gt;&lt;br&gt;spot 空间坐标&lt;br&gt;&lt;br&gt;2695 × 2" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=12;align=left;verticalAlign=middle;spacing=8;" parent="1" vertex="1">
+          <mxGeometry x="810" y="20" width="300" height="90" as="geometry" />
+        </mxCell>
+        <mxCell id="raw_image" value="&lt;br&gt;&lt;b&gt;tissue_hires_image.png&lt;/b&gt;&lt;br&gt;scalefactors_json.json&lt;br&gt;仅用于最终空间可视化" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=12;align=left;verticalAlign=middle;spacing=8;" parent="1" vertex="1">
+          <mxGeometry x="1170" y="20" width="330" height="90" as="geometry" />
+        </mxCell>
+        <mxCell id="prep_gene" value="&lt;b&gt;&lt;br&gt;1. 基因表达预处理&lt;/b&gt;&lt;br&gt;MBA_generate_data.py::normalize()&lt;br&gt;输入: raw X (2695×32285)&lt;br&gt;&lt;br&gt;filter_genes(min_cells=100)&lt;br&gt;highly_variable_genes top3000&lt;br&gt;每点总计数归一化到 10000&lt;br&gt;scale(zero_center=False, max_value=10)&lt;br&gt;&lt;br&gt;输出:&lt;font style=&quot;color: rgb(255, 0, 0);&quot;&gt; X&lt;/font&gt; (2695×3000) float32" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=11;align=left;verticalAlign=middle;spacing=8;" parent="1" vertex="1">
+          <mxGeometry x="10" y="190" width="430" height="210" as="geometry" />
+        </mxCell>
+        <mxCell id="prep_spatial" value="&lt;b&gt;&lt;br&gt;2. 空间图构建&lt;/b&gt;&lt;br&gt;spatial_construct_graph(spatial, k=15)&lt;br&gt;输入: 空间坐标 (2695×2)&lt;br&gt;&lt;br&gt;&lt;b&gt;欧氏距离&lt;/b&gt;自适应阈值&lt;br&gt;min_degree 大于 2, max_degree 大于 15&lt;br&gt;&lt;br&gt;输出: &lt;font style=&quot;color: rgb(255, 0, 0);&quot;&gt;sadj &lt;/font&gt;(2695×2695) 稀疏 0/1&lt;br&gt;graph_nei / graph_neg (2695×2695)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=11;align=left;verticalAlign=middle;spacing=8;" parent="1" vertex="1">
+          <mxGeometry x="550" y="180" width="430" height="210" as="geometry" />
+        </mxCell>
+        <mxCell id="prep_feature" value="&lt;br&gt;&lt;b&gt;3. 特征图构建&lt;br&gt;&lt;/b&gt;features_construct_graph(X, k=15)&lt;br&gt;输入: X (2695×3000)&lt;br&gt;&lt;br&gt;&lt;b&gt;余弦相似度&lt;/b&gt;找 top15 邻居&lt;br&gt;去掉自环后对称化&lt;br&gt;&lt;br&gt;输出: &lt;font style=&quot;color: rgb(255, 0, 0);&quot;&gt;fadj &lt;/font&gt;(2695×2695) 稀疏 0/1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=11;align=left;verticalAlign=middle;spacing=8;" parent="1" vertex="1">
+          <mxGeometry x="1040" y="180" width="430" height="210" as="geometry" />
+        </mxCell>
+        <mxCell id="llm_embed" value="&lt;br&gt;&lt;b&gt;4. LLM 语义嵌入预计算&lt;br&gt;&lt;/b&gt;llm_generate_embedding.py&lt;br&gt;输入: X (2695×3000) 与每个 spot 的 top10 高表达基因名&lt;br&gt;&lt;br&gt;基因名拼成文本 → prompt → Qwen3-4B(冻结)&lt;br&gt;last_hidden_state 按 attention_mask 均值池化&lt;br&gt;&lt;br&gt;输出: &lt;font style=&quot;color: rgb(255, 0, 0);&quot;&gt;llm_emb&lt;/font&gt; (2695×2560)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;fontSize=11;align=left;verticalAlign=middle;spacing=8;" parent="1" vertex="1">
+          <mxGeometry x="1530" y="210" width="570" height="210" as="geometry" />
+        </mxCell>
+        <mxCell id="norm_graph" value="&lt;b&gt;&lt;br&gt;5. 图归一化&lt;/b&gt;&lt;br&gt;normalize_sparse_matrix(A + I)&lt;br&gt;输入: sadj / fadj (2695×2695 稀疏)&lt;br&gt;&lt;br&gt;加自环 → 行归一化 → torch 稀疏张量&lt;br&gt;&lt;br&gt;输出: nsadj / nfadj (2695×2695)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=11;align=left;verticalAlign=middle;spacing=8;" parent="1" vertex="1">
+          <mxGeometry x="60" y="450" width="540" height="120" as="geometry" />
+        </mxCell>
+        <mxCell id="model_group" value="" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#999999;dashed=1;dashPattern=8 4;" parent="1" vertex="1">
+          <mxGeometry x="40" y="590" width="2260" height="710" as="geometry" />
+        </mxCell>
+        <mxCell id="model_header" value="SemST 模型前向 (models.py)" style="text;html=1;whiteSpace=wrap;fontSize=14;fontStyle=1;align=left;" parent="1" vertex="1">
+          <mxGeometry x="40" y="600" width="700" height="30" as="geometry" />
+        </mxCell>
+        <mxCell id="sgcn" value="&lt;b&gt;&lt;br&gt;6a. SGCN 空间视图编码器&lt;/b&gt;&lt;br&gt;GCN: 3000 → 128 → 64&lt;br&gt;输入: X(2695×3000), nsadj(2695×2695)&lt;br&gt;&lt;br&gt;gc1: X·W → ReLU → dropout&lt;br&gt;gc2: → 64&lt;br&gt;&lt;br&gt;输出:&lt;font style=&quot;color: rgb(255, 0, 0);&quot;&gt; emb1&lt;/font&gt; (2695×64)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=11;align=left;verticalAlign=middle;spacing=8;" parent="1" vertex="1">
+          <mxGeometry x="80" y="680" width="430" height="180" as="geometry" />
+        </mxCell>
+        <mxCell id="fgcn" value="&lt;br&gt;&lt;b&gt;6b. FGCN 特征视图编码器&lt;/b&gt;&lt;br&gt;GCN: 3000 → 128 → 64&lt;br&gt;&lt;br&gt;输入: X(2695×3000), nfadj(2695×2695)&lt;br&gt;gc1: X·W → ReLU → dropout&lt;br&gt;gc2: → 64&lt;br&gt;&lt;br&gt;输出:&lt;font style=&quot;color: rgb(255, 0, 0);&quot;&gt; &lt;font&gt;emb2&lt;/font&gt;&lt;/font&gt; (2695×64)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=11;align=left;verticalAlign=middle;spacing=8;" parent="1" vertex="1">
+          <mxGeometry x="570" y="680" width="430" height="180" as="geometry" />
+        </mxCell>
+        <mxCell id="llm_head" value="&lt;b&gt;&lt;br&gt;6c. LLM Head&lt;/b&gt;&lt;br&gt;Linear(2560→1280) → ReLU&lt;br&gt;→ Linear(1280→64)&lt;br&gt;&lt;br&gt;输入: llm_emb(2695×2560)&lt;br&gt;输出: processed_llm(2695×64)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;fontSize=11;align=left;verticalAlign=middle;spacing=8;" parent="1" vertex="1">
+          <mxGeometry x="1060" y="650" width="420" height="130" as="geometry" />
+        </mxCell>
+        <mxCell id="mod_mlp" value="&lt;br&gt;&lt;b&gt;6d. Modulation MLP&lt;/b&gt;&lt;br&gt;Linear(64→32) → ReLU → Dropout&lt;br&gt;→ Linear(32→256)&lt;br&gt;&lt;br&gt;输入: processed_llm(2695×64)&lt;br&gt;输出: params(2695×256)&lt;br&gt;chunk 后 alpha/beta 各 (2695×128)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;fontSize=11;align=left;verticalAlign=middle;spacing=8;" parent="1" vertex="1">
+          <mxGeometry x="1660" y="630" width="470" height="170" as="geometry" />
+        </mxCell>
+        <mxCell id="concat_node" value="&lt;b&gt;&lt;br&gt;Concat&lt;/b&gt;&lt;br&gt;[emb1, emb2] 按 dim=1 拼接&lt;br&gt;&lt;br&gt;输入: emb1/emb2 (2695×64)&lt;br&gt;输出: emb_combined (2695×128)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=11;align=left;verticalAlign=middle;spacing=8;" parent="1" vertex="1">
+          <mxGeometry x="80" y="960" width="480" height="100" as="geometry" />
+        </mxCell>
+        <mxCell id="fsm" value="&lt;br&gt;&lt;b&gt;6e. FSM 语义调制&lt;/b&gt;&lt;br&gt;emb = (1 + alpha) * emb_combined + beta&lt;br&gt;&lt;br&gt;输入: emb_combined(2695×128), alpha/beta(2695×128)&lt;br&gt;输出: emb (2695×128)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=11;align=left;verticalAlign=middle;spacing=8;" parent="1" vertex="1">
+          <mxGeometry x="640" y="920" width="560" height="100" as="geometry" />
+        </mxCell>
+        <mxCell id="fusion" value="&lt;br&gt;&lt;b&gt;融合 MLP&lt;/b&gt;&lt;br&gt;Linear(128→128) → ReLU → Dropout&lt;br&gt;→ Linear(128→64)&lt;br&gt;&lt;br&gt;输入: emb(2695×128)&lt;br&gt;输出: latent_emb(2695×64)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=11;align=left;verticalAlign=middle;spacing=8;" parent="1" vertex="1">
+          <mxGeometry x="1360" y="910" width="400" height="120" as="geometry" />
+        </mxCell>
+        <mxCell id="latent" value="&lt;br&gt;&lt;b&gt;&lt;font style=&quot;color: rgb(255, 0, 0);&quot;&gt;latent_emb&lt;/font&gt;&lt;/b&gt;&lt;br&gt;最终聚类特征&lt;br&gt;2695 × 64" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;fontSize=12;align=center;verticalAlign=middle;" parent="1" vertex="1">
+          <mxGeometry x="640" y="1110" width="380" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="zinb" value="&lt;b&gt;&lt;br&gt;6f. ZINB Decoder&lt;/b&gt;&lt;br&gt;Linear(64→128) → BN → ReLU&lt;br&gt;pi/disp/mean 各: 128 → 3000&lt;br&gt;&lt;br&gt;输入: latent_emb(2695×64)&lt;br&gt;输出:&lt;font style=&quot;color: rgb(255, 0, 0);&quot;&gt; pi, disp, mean&lt;/font&gt; 各 (2695×3000)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=11;align=left;verticalAlign=middle;spacing=8;" parent="1" vertex="1">
+          <mxGeometry x="1170" y="1080" width="460" height="140" as="geometry" />
+        </mxCell>
+        <mxCell id="loss_group" value="" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fdf3f2;strokeColor=#b85450;dashed=1;dashPattern=8 4;" parent="1" vertex="1">
+          <mxGeometry x="60" y="1320" width="2260" height="620" as="geometry" />
+        </mxCell>
+        <mxCell id="loss_header" value="训练损失 (train.py&lt;span style=&quot;background-color: transparent; color: light-dark(rgb(0, 0, 0), rgb(255, 255, 255));&quot;&gt;)&lt;/span&gt;" style="text;html=1;whiteSpace=wrap;fontSize=14;fontStyle=1;align=left;" parent="1" vertex="1">
+          <mxGeometry x="60" y="1330" width="500" height="30" as="geometry" />
+        </mxCell>
+        <mxCell id="loss_zinb" value="&lt;b&gt;&lt;br&gt;7a. ZINB 重建损失&lt;br&gt;&lt;/b&gt;&lt;br&gt;输入: X(2695×3000), pi, disp, mean&lt;br&gt;&lt;br&gt;零膨胀负二项分布 NLL&lt;br&gt;&lt;br&gt;输出: zinb_loss" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;fontSize=11;align=left;verticalAlign=middle;spacing=8;" parent="1" vertex="1">
+          <mxGeometry x="80" y="1370" width="560" height="140" as="geometry" />
+        </mxCell>
+        <mxCell id="loss_reg" value="&lt;b&gt;&lt;br&gt;7b. 空间正则损失&lt;br&gt;&lt;/b&gt;&lt;br&gt;输入: latent_emb(2695×64)&lt;br&gt;&lt;br&gt;graph_nei / graph_neg (2695×2695)&lt;br&gt;cosine_similarity → sigmoid → 正负邻居损失&lt;br&gt;&lt;br&gt;输出: reg_loss" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;fontSize=11;align=left;verticalAlign=middle;spacing=8;" parent="1" vertex="1">
+          <mxGeometry x="700" y="1370" width="560" height="140" as="geometry" />
+        </mxCell>
+        <mxCell id="loss_dcir" value="&lt;br&gt;&lt;b&gt;7c. DICR 特征去相关损失&lt;br&gt;&lt;br&gt;&lt;/b&gt;输入: emb1, emb2 (2695×64)&lt;br&gt;&lt;br&gt;交叉视图特征相关矩阵(FCR)&lt;br&gt;&lt;br&gt;输出: dcir_loss" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;fontSize=11;align=left;verticalAlign=middle;spacing=8;" parent="1" vertex="1">
+          <mxGeometry x="1340" y="1375" width="480" height="130" as="geometry" />
+        </mxCell>
+        <mxCell id="total" value="&lt;br&gt;&lt;b&gt;7d. 总损失&lt;br&gt;&lt;/b&gt;&lt;br&gt;total = 1.0×zinb + 0.1×reg + 0.1×dcir&lt;br&gt;backward() → optimizer.step()&lt;br&gt;更新 SemST 参数" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;fontSize=11;align=left;verticalAlign=middle;spacing=8;" parent="1" vertex="1">
+          <mxGeometry x="1190" y="1690" width="340" height="130" as="geometry" />
+        </mxCell>
+        <mxCell id="eval_group" value="" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f1e7f5;strokeColor=#9673a6;dashed=1;dashPattern=8 4;" parent="1" vertex="1">
+          <mxGeometry x="60" y="1980" width="2210" height="290" as="geometry" />
+        </mxCell>
+        <mxCell id="eval_header" value="聚类与最终输出 (train.py / load_model_clustering.py)" style="text;html=1;whiteSpace=wrap;fontSize=14;fontStyle=1;align=left;" parent="1" vertex="1">
+          <mxGeometry x="60" y="1990" width="700" height="30" as="geometry" />
+        </mxCell>
+        <mxCell id="kmeans" value="&lt;b&gt;&lt;br&gt;8a. KMeans&lt;/b&gt;&lt;br&gt;n_clusters=52&lt;br&gt;&lt;br&gt;输入: latent_emb(2695×64)&lt;br&gt;输出: idx 聚类标签 (2695,)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;fontSize=11;align=left;verticalAlign=middle;spacing=8;" parent="1" vertex="1">
+          <mxGeometry x="80" y="2060" width="440" height="130" as="geometry" />
+        </mxCell>
+        <mxCell id="metrics" value="&lt;br&gt;&lt;b&gt;8b. 评价&lt;/b&gt;&lt;br&gt;输入: idx(2695,), ground(2695,)&lt;br&gt;&lt;br&gt;ARI / NMI 直接比较&lt;br&gt;Hungarian 匹配后算 ACC, weighted/macro F1&lt;br&gt;&lt;br&gt;输出: ARI / NMI / ACC / F1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;fontSize=11;align=left;verticalAlign=middle;spacing=8;" parent="1" vertex="1">
+          <mxGeometry x="620" y="2060" width="590" height="130" as="geometry" />
+        </mxCell>
+        <mxCell id="plot" value="&lt;b&gt;&lt;br&gt;8c. 空间可视化&lt;/b&gt;&lt;br&gt;adata.obs[&#39;idx&#39;] = idx&lt;br&gt;adata.obsm[&#39;emb&#39;] = latent_emb&lt;br&gt;adata.obsm[&#39;mean&#39;] = mean&lt;br&gt;sc.pl.spatial(img_key=&#39;hires&#39;)&lt;br&gt;&lt;br&gt;输出: result/Mouse_Brain_Anterior/SemST.png" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;fontSize=11;align=left;verticalAlign=middle;spacing=8;" parent="1" vertex="1">
+          <mxGeometry x="1310" y="2070" width="460" height="130" as="geometry" />
+        </mxCell>
+        <mxCell id="final" value="&lt;br&gt;&lt;b&gt;最终结果&lt;/b&gt;&lt;br&gt;每个 spot 的空间域标签 idx(2695,)&lt;br&gt;最佳 ARI 对应的 latent_emb(2695×64)&lt;br&gt;mean(2695×3000)&lt;br&gt;指标 ARI/NMI/ACC/F1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;fontSize=11;align=left;verticalAlign=middle;spacing=8;" parent="1" vertex="1">
+          <mxGeometry x="1230" y="2380" width="410" height="140" as="geometry" />
+        </mxCell>
+        <mxCell id="e_raw_gene" value="raw X 2695×32285" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;fontSize=10;labelBackgroundColor=#FFFFFF;" parent="1" source="raw_count" target="prep_gene" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e_raw_pos" value="spatial 2695×2" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;fontSize=10;labelBackgroundColor=#FFFFFF;" parent="1" source="raw_pos" target="prep_spatial" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e_raw_meta" value="ground 标签 2695×1" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;fontSize=10;labelBackgroundColor=#FFFFFF;exitX=0.5;exitY=1;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" parent="1" source="raw_meta" target="metrics" edge="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="600" y="130" />
+              <mxPoint x="520" y="130" />
+              <mxPoint x="520" y="1740" />
+              <mxPoint x="915" y="1740" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="e_x_feature" value="X 2695×3000" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;fontSize=10;labelBackgroundColor=#FFFFFF;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" parent="1" source="prep_gene" target="prep_feature" edge="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="440" y="344.9473684210525" as="sourcePoint" />
+            <mxPoint x="1040" y="340.0000000000002" as="targetPoint" />
+            <Array as="points">
+              <mxPoint x="225" y="410" />
+              <mxPoint x="1010" y="410" />
+              <mxPoint x="1010" y="285" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="e_x_llm" value="X 2695×3000" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;fontSize=10;labelBackgroundColor=#FFFFFF;entryX=0.5;entryY=0;entryDx=0;entryDy=0;exitX=0.5;exitY=1;exitDx=0;exitDy=0;" parent="1" source="prep_gene" target="llm_embed" edge="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="225" y="420" />
+              <mxPoint x="1500" y="420" />
+              <mxPoint x="1500" y="190" />
+              <mxPoint x="1815" y="190" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="e_sadj_norm" value="sadj 2695×2695" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;fontSize=10;labelBackgroundColor=#FFFFFF;" parent="1" source="prep_spatial" target="norm_graph" edge="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="765" y="430" />
+              <mxPoint x="330" y="430" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="e_fadj_norm" value="fadj 2695×2695" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;fontSize=10;labelBackgroundColor=#FFFFFF;" parent="1" source="prep_feature" edge="1">
+          <mxGeometry x="-0.056" relative="1" as="geometry">
+            <mxPoint x="330" y="450" as="targetPoint" />
+            <Array as="points">
+              <mxPoint x="1255" y="440" />
+              <mxPoint x="330" y="440" />
+            </Array>
+            <mxPoint as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="e_graph_reg" value="graph_nei / graph_neg 2695×2695" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;fontSize=10;labelBackgroundColor=#FFFFFF;" parent="1" source="prep_spatial" target="loss_reg" edge="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="765" y="430" />
+              <mxPoint x="980" y="430" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="e_x_sgcn" value="X 2695×3000" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;fontSize=10;labelBackgroundColor=#FFFFFF;exitX=0;exitY=0.5;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" parent="1" source="prep_gene" target="sgcn" edge="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="-20" y="295" />
+              <mxPoint x="-20" y="660" />
+              <mxPoint x="295" y="660" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="e_x_fgcn" value="X 2695×3000" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;fontSize=10;labelBackgroundColor=#FFFFFF;" parent="1" source="prep_gene" target="fgcn" edge="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="225" y="490" />
+              <mxPoint x="785" y="490" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="e_nsadj" value="nsadj 2695×2695" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;fontSize=10;labelBackgroundColor=#FFFFFF;exitX=0.5;exitY=1;exitDx=0;exitDy=0;" parent="1" source="norm_graph" target="sgcn" edge="1">
+          <mxGeometry x="0.3101" y="-25" relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="330" y="620" />
+              <mxPoint x="295" y="620" />
+            </Array>
+            <mxPoint as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="e_nfadj" value="nfadj 2695×2695" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;fontSize=10;labelBackgroundColor=#FFFFFF;" parent="1" source="norm_graph" target="fgcn" edge="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="330" y="620" />
+              <mxPoint x="785" y="620" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="e_llm_head" value="llm_emb 2695×2560" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;fontSize=10;labelBackgroundColor=#FFFFFF;" parent="1" source="llm_embed" target="llm_head" edge="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="1815" y="500" />
+              <mxPoint x="1270" y="500" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="e_head_mod" value="processed_llm 2695×64" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;fontSize=10;labelBackgroundColor=#FFFFFF;" parent="1" source="llm_head" target="mod_mlp" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e_emb1_concat" value="emb1 2695×64" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;fontSize=10;labelBackgroundColor=#FFFFFF;" parent="1" source="sgcn" target="concat_node" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e_emb2_concat" value="emb2 2695×64" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;fontSize=10;labelBackgroundColor=#FFFFFF;exitX=0.5;exitY=1;exitDx=0;exitDy=0;" parent="1" source="fgcn" target="concat_node" edge="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="785" y="900" />
+              <mxPoint x="320" y="900" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="e_concat_fsm" value="emb_combined 2695×128" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;fontSize=10;labelBackgroundColor=#FFFFFF;exitX=0.5;exitY=1;exitDx=0;exitDy=0;" parent="1" source="concat_node" target="fsm" edge="1">
+          <mxGeometry x="-0.0001" relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="320" y="1100" />
+              <mxPoint x="600" y="1100" />
+              <mxPoint x="600" y="970" />
+            </Array>
+            <mxPoint as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="e_mod_fsm" value="alpha/beta 各 2695×128" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;fontSize=10;labelBackgroundColor=#FFFFFF;exitX=0.5;exitY=1;exitDx=0;exitDy=0;" parent="1" source="mod_mlp" target="fsm" edge="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="1895" y="890" />
+              <mxPoint x="920" y="890" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="e_fsm_fusion" value="emb 2695×128" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;fontSize=10;labelBackgroundColor=#FFFFFF;" parent="1" source="fsm" target="fusion" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e_fusion_latent" value="latent_emb 2695×64" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;fontSize=10;labelBackgroundColor=#FFFFFF;exitX=0.5;exitY=1;exitDx=0;exitDy=0;" parent="1" source="fusion" target="latent" edge="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="1560" y="1060" />
+              <mxPoint x="830" y="1060" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="e_latent_zinb" value="latent_emb 2695×64" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;fontSize=10;labelBackgroundColor=#FFFFFF;" parent="1" source="latent" target="zinb" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e_zinb_loss" value="pi/disp/mean 各 2695×3000" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;fontSize=10;labelBackgroundColor=#FFFFFF;exitX=0.5;exitY=1;exitDx=0;exitDy=0;" parent="1" source="zinb" target="loss_zinb" edge="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="1400" y="1240" />
+              <mxPoint x="360" y="1240" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="e_x_zinb_loss" value="X 2695×3000" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;fontSize=10;labelBackgroundColor=#FFFFFF;" parent="1" source="prep_gene" target="loss_zinb" edge="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="-60" y="295" />
+              <mxPoint x="-60" y="1435" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="e_latent_reg" value="latent_emb 2695×64" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;fontSize=10;labelBackgroundColor=#FFFFFF;" parent="1" source="latent" target="loss_reg" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e_emb1_dcir" value="emb1 2695×64" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;fontSize=10;labelBackgroundColor=#FFFFFF;" parent="1" source="sgcn" target="loss_dcir" edge="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="295" y="880" />
+              <mxPoint x="1580" y="880" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="e_emb2_dcir" value="emb2 2695×64" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;fontSize=10;labelBackgroundColor=#FFFFFF;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" parent="1" source="fgcn" target="loss_dcir" edge="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="785" y="870" />
+              <mxPoint x="1580" y="870" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="e_loss_total1" value="zinb_loss" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;fontSize=10;labelBackgroundColor=#FFFFFF;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" parent="1" source="loss_zinb" target="total" edge="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="360" y="1540" />
+              <mxPoint x="1360" y="1540" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="e_loss_total2" value="reg_loss" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;fontSize=10;labelBackgroundColor=#FFFFFF;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" parent="1" source="loss_reg" target="total" edge="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="980" y="1600" />
+              <mxPoint x="1360" y="1600" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="e_loss_total3" value="dcir_loss" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;fontSize=10;labelBackgroundColor=#FFFFFF;entryX=0.5;entryY=0;entryDx=0;entryDy=0;exitX=0.5;exitY=1;exitDx=0;exitDy=0;" parent="1" source="loss_dcir" target="total" edge="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="1580" y="1600" />
+              <mxPoint x="1360" y="1600" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="e_backward" value="反向传播更新参数" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;fontSize=10;labelBackgroundColor=#FFFFFF;dashed=1;endArrow=block;exitX=0.5;exitY=1;exitDx=0;exitDy=0;" parent="1" source="total" target="model_header" edge="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="1360" y="1840" />
+              <mxPoint x="1130" y="1840" />
+              <mxPoint x="1130" y="1570" />
+              <mxPoint x="170" y="1570" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="e_latent_kmeans" value="latent_emb 2695×64" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;fontSize=10;labelBackgroundColor=#FFFFFF;" parent="1" source="latent" target="kmeans" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e_kmeans_metrics" value="idx 2695×1" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;fontSize=10;labelBackgroundColor=#FFFFFF;" parent="1" source="kmeans" target="metrics" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e_kmeans_plot" value="idx 2695×1" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;fontSize=10;labelBackgroundColor=#FFFFFF;" parent="1" source="kmeans" target="plot" edge="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="300" y="1870" />
+              <mxPoint x="1540" y="1870" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="e_metrics_final" value="ARI/NMI/ACC/F1" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;fontSize=10;labelBackgroundColor=#FFFFFF;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" parent="1" source="metrics" target="final" edge="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="915" y="2300" />
+              <mxPoint x="1435" y="2300" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="e_latent_final" value="latent_emb 2695×64" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;fontSize=10;labelBackgroundColor=#FFFFFF;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" parent="1" source="latent" target="final" edge="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="830" y="1260" />
+              <mxPoint x="2035" y="1260" />
+              <mxPoint x="2035" y="2320" />
+              <mxPoint x="1435" y="2320" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="e_plot_final" value="SemST.png" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;fontSize=10;labelBackgroundColor=#FFFFFF;" parent="1" source="plot" target="final" edge="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="1540" y="2300" />
+              <mxPoint x="1435" y="2300" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

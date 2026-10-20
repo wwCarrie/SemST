@@ -1,0 +1,30 @@
+dataset        = Human_Breast_Cancer
+config         = Human_Breast_Cancer
+spots          = 3798
+classes        = 20
+fdim / llm_dim = 2000 / 2560
+
+ARI = 69.56
+NMI = 68.29
+AMI = 67.70
+ACC = 66.96
+F1_weighted = 66.03
+F1_macro    = 49.70
+
+== 误差归因 ==
+类别规模-准确率 相关系数 : 0.535
+大类别(>=50 spot)平均准确率 : 52.5%
+小类别(<50 spot) 平均准确率 : 71.0%
+
+误差中, 预测类别是其空间邻居类别 的占比 : 27.6% (347/1255)
+
+== 0% 准确率的类被误分到哪 ==
+  Tumor_edge_4 (n=50) -> Healthy_2(22), IDC_2(10), DCIS/LCIS_2(9)
+
+== 准确率最高的 5 个类 ==
+  IDC_2 (n=383) -> 99.2%
+  DCIS/LCIS_2 (n=28) -> 96.4%
+  IDC_4 (n=442) -> 91.6%
+  Healthy_1 (n=411) -> 91.0%
+  DCIS/LCIS_4 (n=161) -> 90.1%
+

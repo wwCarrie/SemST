@@ -37,7 +37,7 @@ def normalize(adata, highly_genes=3000):
     # 归一化到每个细胞总表达量为 10000（CPM 归一化）
     adata = adata[:, adata.var['highly_variable']].copy()
     adata.X = adata.X / np.sum(adata.X, axis=1).reshape(-1, 1) * 10000
-    # scale 缩放，把过大的值压到 10 以内
+    # scale 缩放，把过大的值压到 10 以内，关闭零中心化，不会因减去均值而整体产生负值
     sc.pp.scale(adata, zero_center=False, max_value=10)
     return adata
 
@@ -54,7 +54,7 @@ def load_ST_file(path, highly_genes, k, radius):
     labels_path = os.path.join(path, "metadata.tsv")
 
     labels = pd.read_table(labels_path, sep='\t')
-    labels = labels["layer_guess_reordered"].copy()
+    labels = labels["layer_guess_reordered"].copy() # 只保留人工标注的皮层层次
     NA_labels = np.where(labels.isnull())
     labels = labels.drop(labels.index[NA_labels])
     ground = labels.copy()
@@ -65,11 +65,17 @@ def load_ST_file(path, highly_genes, k, radius):
     obs_names = np.array(adata1.obs.index)
     positions = adata1.obsm['spatial']
 
+    # 0：行；1：列
     data = np.delete(adata1.X.toarray(), NA_labels, axis=0)
     obs_names = np.delete(obs_names, NA_labels, axis=0)
     positions = np.delete(positions, NA_labels, axis=0)
 
-    adata = ad.AnnData(pd.DataFrame(data, index=obs_names, columns=np.array(adata1.var.index), dtype=np.float32))
+    adata = ad.AnnData(
+        pd.DataFrame(
+            data, 
+            index=obs_names, 
+            columns=np.array(adata1.var.index), 
+            dtype=np.float32))
 
     adata.var_names_make_unique()
     adata.obs['ground_truth'] = labels
