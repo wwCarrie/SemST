@@ -2,6 +2,7 @@
 data/
 result/
 generate_data/
+model/
 
 # Common large/binary artifacts
 *.h5ad

@@ -1,5 +1,10 @@
 import os
 
+# 国内网络无法直连 huggingface.co，改用镜像站 hf-mirror.com
+os.environ.setdefault("HF_ENDPOINT", "https://hf-mirror.com")
+# 禁用 Xet 存储（Qwen3 权重存在 xethub.hf.co，镜像站无法代理，需走传统 LFS 下载）
+os.environ["HF_HUB_DISABLE_XET"] = "1"
+
 import numpy as np
 import scanpy as sc
 import torch
@@ -102,12 +107,12 @@ if __name__ == '__main__':
     LLM_MAX_LENGTH = 2560
     LLM_PRECOMPUTATION_BATCH_SIZE = 8
 
-    LLM_MODEL_NAME = "Qwen3-4B"
+    LLM_MODEL_NAME = os.path.join(os.path.dirname(os.path.abspath(__file__)), "model", "Qwen3-4B")
     datasets = ['Mouse_Brain_Anterior']
     # datasets = ['Human_Breast_Cancer']
     for dataset_name in datasets:
 
-        NPY_PATH = rf'data/npys/embeddings_{dataset_name}.npy'
+        NPY_PATH = rf'data/new_npys/embeddings_{dataset_name}.npy'
         if not os.path.exists(os.path.dirname(NPY_PATH)):
             os.makedirs(os.path.dirname(NPY_PATH))
 
